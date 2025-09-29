@@ -2,8 +2,7 @@ streamlit
 pandas
 pyrebase4
 firebase-admin
-google-cloud-storage==2.7.0
-PyJWT==2.3.0
-setuptools
+google-cloud-storage
 requests
-
+python-jwt
+gcloud

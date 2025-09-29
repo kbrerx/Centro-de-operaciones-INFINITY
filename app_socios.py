@@ -8,10 +8,10 @@ import pyrebase
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# --- Configuración Inicial de la Página ---
+# --- CONFIGURACIÓN DE PÁGINA PERSONALIZADA ---
 st.set_page_config(
-    page_title="Centro de Mando de Ofertas",
-    page_icon="🚀",
+    page_title="Centro de Mando INFINITY",
+    page_icon="♾️",
     layout="wide"
 )
 
@@ -67,7 +67,6 @@ def json_to_df(json_str):
 
 def save_data_to_firestore():
     """Guarda todo el estado de la sesión del equipo en una ruta compartida en Firestore."""
-    # MODIFICACIÓN CLAVE: Se usa una ruta compartida definida en secrets.toml
     try:
         workspace_id = st.secrets["team_config"]["workspace_id"]
         doc_ref = db.collection('socios').document(workspace_id).collection('app_data').document('main')
@@ -96,7 +95,6 @@ def save_data_to_firestore():
 
 def load_data_from_firestore():
     """Carga los datos del equipo desde la ruta compartida de Firestore."""
-    # MODIFICACIÓN CLAVE: Se usa una ruta compartida definida en secrets.toml
     try:
         workspace_id = st.secrets["team_config"]["workspace_id"]
         doc_ref = db.collection('socios').document(workspace_id).collection('app_data').document('main')
@@ -128,17 +126,14 @@ def load_data_from_firestore():
 
 # --- LÓGICA DE AUTENTICACIÓN Y PANTALLA DE LOGIN (VERSIÓN SOCIOS) ---
 def show_login_page():
-    st.title("🚀 Centro de Mando de Ofertas")
-    # MODIFICACIÓN: Título actualizado para la versión de socios.
-    st.subheader("Bienvenido a la Versión para Socios")
+    st.title("♾️ Centro de Mando INFINITY")
+    st.subheader("Tu nexo de inteligencia para escalar sin límites.")
     
-    # Cargar la lista de correos autorizados desde los secretos.
     try:
         authorized_emails = st.secrets["team_config"]["authorized_emails"]
     except KeyError:
         st.error("Error de configuración: La lista de correos autorizados no está definida en secrets.toml.")
         st.stop()
-
 
     if 'auth_form' not in st.session_state:
         st.session_state.auth_form = 'Login'
@@ -150,7 +145,6 @@ def show_login_page():
             password = st.text_input("Contraseña", type="password")
             submit_button = st.form_submit_button("Entrar")
             if submit_button:
-                # MODIFICACIÓN CLAVE: Verificar si el email está en la whitelist ANTES de proceder.
                 if email not in authorized_emails:
                     st.error("Acceso denegado. Tu correo no está en la lista de usuarios autorizados.")
                 else:
@@ -159,6 +153,7 @@ def show_login_page():
                         st.session_state.logged_in = True
                         st.session_state.user_id = user['localId']
                         st.session_state.user_email = user['email']
+                        st.session_state.show_welcome_animation = True
                         load_data_from_firestore()
                         st.rerun()
                     except Exception as e:
@@ -175,7 +170,6 @@ def show_login_page():
             confirm_password = st.text_input("Confirmar Contraseña", type="password")
             submit_button = st.form_submit_button("Registrarse")
             if submit_button:
-                # MODIFICACIÓN CLAVE: Verificar si el email está en la whitelist ANTES de crear la cuenta.
                 if email not in authorized_emails:
                     st.error("Este correo electrónico no está autorizado para registrarse.")
                 elif password == confirm_password:
@@ -206,13 +200,11 @@ if 'boveda_view_mode' not in st.session_state: st.session_state['boveda_view_mod
 if 'editing_plantilla_id' not in st.session_state: st.session_state['editing_plantilla_id'] = None
 if 'editing_checklist_oferta_id' not in st.session_state: st.session_state['editing_checklist_oferta_id'] = None 
 
-# --- (El resto del código de la aplicación (funciones, UI, etc.) sigue aquí sin cambios) ---
-# --- No se requieren modificaciones en la lógica principal de la aplicación. ---
-
 # --- Funciones para la Bóveda ---
 def eliminar_entrada_boveda(id_entrada):
     st.session_state.boveda = [entrada for entrada in st.session_state.boveda if entrada['id'] != id_entrada]
     save_data_to_firestore()
+    st.balloons()
     st.success("Oferta eliminada de la Bóveda.")
 
 def render_rating_stars(rating):
@@ -224,6 +216,7 @@ def update_entrada_boveda(id_entrada, nuevos_datos):
             st.session_state.boveda[i] = nuevos_datos
             break
     save_data_to_firestore()
+    st.balloons()
     st.success("¡Oferta actualizada en la Bóveda!")
 
 def update_boveda_status(entrada_id, key):
@@ -355,6 +348,7 @@ def crear_nueva_oferta(nombre, tipo_embudo, precio_principal, plantilla_id=None)
 
     st.session_state.ofertas[id_oferta] = oferta_data
     save_data_to_firestore()
+    st.balloons()
     st.success(f"¡Oferta '{nombre}' creada con éxito!")
     st.session_state.oferta_seleccionada = id_oferta
     st.session_state.vista_actual = 'dashboard'
@@ -495,6 +489,7 @@ def crear_campana_escala(id_oferta, nombre_campana, anuncio_ganador, estrategia,
         "estado": "🟢 Activa"
     }
     save_data_to_firestore()
+    st.balloons()
     st.success(f"¡Campaña de escala '{nombre_campana}' creada con éxito!")
     st.session_state['anuncio_para_escalar'] = None
     st.session_state['accion_de_escala'] = None
@@ -526,7 +521,14 @@ def agregar_registro_escala(id_oferta, id_campana, nuevo_registro):
 # --- FLUJO PRINCIPAL DE LA APLICACIÓN ---
 def main_app():
     with st.sidebar:
-        st.title("Panel de Control")
+        st.image("Mujer Bio Poderosa (1).png", use_container_width=True) 
+        st.title("Panel de Control INFINITY")
+
+        if st.session_state.get('show_welcome_animation', False):
+            with st.spinner(f"Conectando con el Nexo INFINITY..."):
+                time.sleep(2)
+            st.session_state.show_welcome_animation = False
+
         st.write(f"Conectado como: **{st.session_state.user_email}**")
         
         if st.button("Cerrar Sesión", use_container_width=True, type="secondary"):
@@ -540,12 +542,12 @@ def main_app():
 
         st.divider()
         
-        if st.button("📈 Ofertas y Dashboard", use_container_width=True):
+        if st.button("📈 Dashboard INFINITY", use_container_width=True):
             st.session_state.vista_actual = 'dashboard'
             st.session_state.oferta_seleccionada = None
             st.rerun()
             
-        if st.button("🕵️ Bóveda de Ofertas", use_container_width=True):
+        if st.button("🕵️ Bóveda de Inteligencia", use_container_width=True):
             st.session_state.vista_actual = 'boveda'
             st.session_state.oferta_seleccionada = None
             st.rerun()
@@ -589,8 +591,6 @@ def main_app():
                         if st.button(f"{detalles['estado']} {detalles['nombre']}", key=f"btn_{id_oferta}", use_container_width=True):
                             seleccionar_oferta(id_oferta)
 
-    # --- El resto del código de la interfaz de usuario no necesita cambios ---
-    # --- ... (código UI pegado sin modificaciones) ... ---
     if st.session_state.vista_actual == 'plantillas':
         st.title("✅ Administrador de Plantillas de Proyectos")
         st.info("Define tus procesos de lanzamiento una vez y reutilízalos para cada nueva oferta.", icon="💡")
@@ -912,11 +912,15 @@ def main_app():
                     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
                     kpi1.metric("💵 Inversión Total", f"${total_inversion:,.2f}")
                     kpi2.metric("📈 Facturación Bruta Total", f"${total_facturacion_bruta:,.2f}")
+                    
                     with kpi3:
                         st.write("💰 Ganancia Neta Total")
-                        ganancia_color = "green" if total_ganancia_neta >= 0 else "red"
+                        ganancia_color = "#33ff99" if total_ganancia_neta >= 0 else "#ff3366"
                         st.markdown(f"<p style='font-size: 1.75rem; font-weight: 600; color: {ganancia_color};'>${total_ganancia_neta:,.2f}</p>", unsafe_allow_html=True)
-                    kpi4.metric("🎯 ROAS Neto General", f"{roas_neto_global:.2f}")
+
+                    with kpi4:
+                        st.metric("🎯 ROAS Neto General", f"{roas_neto_global:.2f}")
+
 
                     st.divider()
                     st.subheader("Desglose de Rendimiento por Oferta")
@@ -1077,7 +1081,7 @@ def main_app():
         c3.metric("💵 Inversión Total", f"${total_inversion_global:,.2f}")
         c4.metric("📈 Facturación Bruta", f"${total_facturacion_bruta_global:,.2f}")
         with c5:
-            st.write("💰 Ganancia Neta"); ganancia_color = "green" if total_ganancia_neta_global >= 0 else "red"
+            st.write("💰 Ganancia Neta"); ganancia_color = "#33ff99" if total_ganancia_neta_global >= 0 else "#ff3366"
             st.markdown(f"<p style='font-size: 1.75rem; font-weight: 600; color: {ganancia_color};'>${total_ganancia_neta_global:,.2f}</p>", unsafe_allow_html=True)
         c6.metric("🎯 ROAS Neto", f"{roas_neto_global:.2f}")
         c7.metric("📊 Estado", oferta_actual['estado'])
@@ -1092,7 +1096,7 @@ def main_app():
                     st.subheader("🧪 Fase de Testeo")
                     st.metric("💵 Inversión", f"${inversion_testeo:,.2f}")
                     st.metric("📈 Facturación Bruta", f"${facturacion_bruta_testeo:,.2f}")
-                    ganancia_color_test = "green" if ganancia_neta_testeo >= 0 else "red"
+                    ganancia_color_test = "#33ff99" if ganancia_neta_testeo >= 0 else "#ff3366"
                     st.markdown(f"**💰 Ganancia Neta**")
                     st.markdown(f"<p style='font-size: 1.5rem; font-weight: 600; color: {ganancia_color_test};'>${ganancia_neta_testeo:,.2f}</p>", unsafe_allow_html=True)
                     st.metric("🎯 ROAS Neto", f"{roas_neto_testeo:.2f}")
@@ -1100,7 +1104,7 @@ def main_app():
                     st.subheader("🚀 Fase de Escala")
                     st.metric("💵 Inversión", f"${inversion_escala:,.2f}")
                     st.metric("📈 Facturación Bruta", f"${facturacion_bruta_escala:,.2f}")
-                    ganancia_color_escala = "green" if ganancia_neta_escala >= 0 else "red"
+                    ganancia_color_escala = "#33ff99" if ganancia_neta_escala >= 0 else "#ff3366"
                     st.markdown(f"**💰 Ganancia Neta**")
                     st.markdown(f"<p style='font-size: 1.5rem; font-weight: 600; color: {ganancia_color_escala};'>${ganancia_neta_escala:,.2f}</p>", unsafe_allow_html=True)
                     st.metric("🎯 ROAS Neto", f"{roas_neto_escala:.2f}")
@@ -1311,13 +1315,13 @@ def main_app():
                             df_para_mostrar = df_para_mostrar[df_para_mostrar['Estado'] == "🟢 Activo"]
                         def color_roas(val):
                             color = 'inherit'
-                            if val >= 1.7: color = 'green'
-                            elif val < 1.2: color = 'red'
+                            if val >= 1.7: color = '#33ff99'
+                            elif val < 1.2: color = '#ff3366'
                             return f'color: {color}'
                         def color_ganancia(val):
                             color = 'inherit'
-                            if val > 0: color = 'green'
-                            elif val < 0: color = 'red'
+                            if val > 0: color = '#33ff99'
+                            elif val < 0: color = '#ff3366'
                             return f'color: {color}'
                         
                         cols_display_order = ['Anuncio', 'Estado', 'Inversión', 'Ganancia Neta', ventas_pp_col]
@@ -1455,13 +1459,13 @@ def main_app():
                 else:
                     def color_roas(val):
                         color = 'inherit'
-                        if val >= 1.7: color = 'green'
-                        elif val < 1.2: color = 'red'
+                        if val >= 1.7: color = '#33ff99'
+                        elif val < 1.2: color = '#ff3366'
                         return f'color: {color}'
                     def color_ganancia(val):
                         color = 'inherit'
-                        if val > 0: color = 'green'
-                        elif val < 0: color = 'red'
+                        if val > 0: color = '#33ff99'
+                        elif val < 0: color = '#ff3366'
                         return f'color: {color}'
                     for cid, cdetails in campanas_escala.items():
                         ganancia_neta_campana_header = 0
@@ -1592,8 +1596,10 @@ def main_app():
                         total_ventas_pp = df_filtrado_funnel[ventas_pp_col].sum() if ventas_pp_col in df_filtrado_funnel else 0
                         
                         checkout_cr = (total_ventas_pp / total_pagos_iniciados) * 100 if total_pagos_iniciados > 0 else 0
+                        
+                        progress_value_checkout = min(checkout_cr, 100)
                         st.metric(label="Tasa de Conversión (Pagos Iniciados a Ventas PP)", value=f"{checkout_cr:.2f}%")
-                        st.progress(int(checkout_cr)); st.caption(f"Pagos Iniciados: {int(total_pagos_iniciados)} | Ventas PP: {int(total_ventas_pp)}")
+                        st.progress(int(progress_value_checkout)); st.caption(f"Pagos Iniciados: {int(total_pagos_iniciados)} | Ventas PP: {int(total_ventas_pp)}")
                         
                         funnel_items = [v for k, v in oferta_actual['funnel'].items() if k != 'principal']
                         if funnel_items:
@@ -1604,9 +1610,11 @@ def main_app():
                                 if col_name in df_filtrado_funnel.columns:
                                     total_ventas_item = df_filtrado_funnel[col_name].sum()
                                     item_cr = (total_ventas_item / total_ventas_pp) * 100 if total_ventas_pp > 0 else 0
+                                    
+                                    progress_value_item = min(item_cr, 100)
                                     with cols[i]:
                                         st.metric(label=f"Adopción de {alias} ({item['nombre']})", value=f"{item_cr:.2f}%")
-                                        st.progress(int(item_cr)); st.caption(f"Ventas {alias}: {int(total_ventas_item)}")
+                                        st.progress(int(progress_value_item)); st.caption(f"Ventas {alias}: {int(total_ventas_item)}")
                                     i+=1
                         
                         st.divider()
@@ -1660,3 +1668,4 @@ if st.session_state.logged_in:
     main_app()
 else:
     show_login_page()
+
