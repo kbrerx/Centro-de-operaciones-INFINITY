@@ -7,6 +7,7 @@ import json
 import pyrebase
 import firebase_admin
 from firebase_admin import credentials, firestore
+import copy # <-- CORRECCIÓN: Importamos la librería para copias profundas
 
 # --- CONFIGURACIÓN DE PÁGINA PERSONALIZADA ---
 st.set_page_config(
@@ -14,6 +15,29 @@ st.set_page_config(
     page_icon="♾️",
     layout="wide"
 )
+
+# --- INYECCIÓN DE CSS PARA ANIMACIONES ---
+st.markdown("""
+<style>
+/* Animación de pulso para KPIs */
+@keyframes glow {
+  0% { box-shadow: 0 0 5px #9d67f8; }
+  50% { box-shadow: 0 0 20px #9d67f8; }
+  100% { box-shadow: 0 0 5px #9d67f8; }
+}
+.infinity-glow {
+  border-radius: 10px;
+  padding: 1rem;
+  animation: glow 2.5s infinite ease-in-out;
+  /* Añadimos esto para que el contenido se alinee bien */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 # --- Configuración de Localismo para Español ---
 try:
@@ -74,24 +98,26 @@ def save_data_to_firestore():
         st.error("Error de configuración: No se encontró 'team_config' o 'workspace_id' en los secretos.")
         return
 
+    # CORRECCIÓN: Usar una copia profunda para no modificar el estado de la sesión en vivo
     data_to_save = {
-        'ofertas': {},
-        'boveda': st.session_state.get('boveda', []),
-        'plantillas': st.session_state.get('plantillas', {})
+        'ofertas': copy.deepcopy(st.session_state.get('ofertas', {})),
+        'boveda': copy.deepcopy(st.session_state.get('boveda', [])),
+        'plantillas': copy.deepcopy(st.session_state.get('plantillas', {}))
     }
-    for offer_id, offer_data in st.session_state.get('ofertas', {}).items():
-        processed_offer = offer_data.copy()
-        if 'testeos' in processed_offer:
-            processed_offer['testeos'] = df_to_json(processed_offer['testeos'])
-        if 'escala' in processed_offer:
-            for camp_id, camp_data in processed_offer['escala'].items():
-                if 'registros' in camp_data:
+
+    for offer_id, offer_data in data_to_save['ofertas'].items():
+        if 'testeos' in offer_data and isinstance(offer_data['testeos'], pd.DataFrame):
+            offer_data['testeos'] = df_to_json(offer_data['testeos'])
+        if 'escala' in offer_data:
+            for camp_id, camp_data in offer_data['escala'].items():
+                if 'registros' in camp_data and isinstance(camp_data['registros'], pd.DataFrame):
                     camp_data['registros'] = df_to_json(camp_data['registros'])
-        data_to_save['ofertas'][offer_id] = processed_offer
+
     try:
         doc_ref.set(data_to_save)
     except Exception as e:
         st.error(f"Error al guardar los datos en la nube: {e}")
+
 
 def load_data_from_firestore():
     """Carga los datos del equipo desde la ruta compartida de Firestore."""
@@ -1055,7 +1081,7 @@ def main_app():
         todos_los_registros_escala = []
         campanas_escala_global = oferta_actual.get('escala', {})
         for campana_details in campanas_escala_global.values():
-            if not campana_details['registros'].empty:
+            if 'registros' in campana_details and not campana_details['registros'].empty:
                 registros_campana = campana_details['registros']
                 inversion_escala += registros_campana['Inversión'].sum()
                 facturacion_bruta_escala += registros_campana['Facturación Total'].sum()
@@ -1469,7 +1495,7 @@ def main_app():
                         return f'color: {color}'
                     for cid, cdetails in campanas_escala.items():
                         ganancia_neta_campana_header = 0
-                        if not cdetails['registros'].empty:
+                        if 'registros' in cdetails and not cdetails['registros'].empty:
                             ganancia_neta_campana_header = cdetails['registros']['Ganancia Neta'].sum()
                         estado_campana = cdetails.get("estado", "🟢 Activa")
                         expander_title = f"**{cdetails['nombre_campana']}** (Estrategia: {cdetails['estrategia']}) | Estado: {estado_campana} | Ganancia Neta: ${ganancia_neta_campana_header:,.2f}"
@@ -1571,7 +1597,7 @@ def main_app():
                 st.subheader("🔬 Monitor de Signos Vitales del Embudo (Global)")
                 df_funnel_completo = [df_testeos_global.copy()]
                 for camp_details in oferta_actual.get('escala', {}).values():
-                    if not camp_details['registros'].empty:
+                    if 'registros' in camp_details and not camp_details['registros'].empty:
                         registros_escala = camp_details['registros'].copy()
                         registros_escala['Fecha'] = pd.to_datetime(registros_escala['Fecha'])
                         df_funnel_completo.append(registros_escala)
