@@ -7,7 +7,7 @@ import json
 import pyrebase
 import firebase_admin
 from firebase_admin import credentials, firestore
-import copy # <-- CORRECCIÓN: Importamos la librería para copias profundas
+import copy
 
 # --- CONFIGURACIÓN DE PÁGINA PERSONALIZADA ---
 st.set_page_config(
@@ -98,7 +98,6 @@ def save_data_to_firestore():
         st.error("Error de configuración: No se encontró 'team_config' o 'workspace_id' en los secretos.")
         return
 
-    # CORRECCIÓN: Usar una copia profunda para no modificar el estado de la sesión en vivo
     data_to_save = {
         'ofertas': copy.deepcopy(st.session_state.get('ofertas', {})),
         'boveda': copy.deepcopy(st.session_state.get('boveda', [])),
@@ -618,6 +617,7 @@ def main_app():
                             seleccionar_oferta(id_oferta)
 
     if st.session_state.vista_actual == 'plantillas':
+        # ... (código de la vista de plantillas sin cambios) ...
         st.title("✅ Administrador de Plantillas de Proyectos")
         st.info("Define tus procesos de lanzamiento una vez y reutilízalos para cada nueva oferta.", icon="💡")
 
@@ -684,8 +684,8 @@ def main_app():
                         del st.session_state.plantillas[id_plantilla]
                         save_data_to_firestore()
                         st.rerun()
-
     elif st.session_state.vista_actual == 'boveda':
+        # ... (código de la vista de bóveda sin cambios) ...
         st.title("🕵️ Bóveda de Inteligencia de Mercado")
         st.info("Registra y analiza ofertas del mercado para tomar mejores decisiones estratégicas.", icon="💡")
         
@@ -968,6 +968,7 @@ def main_app():
                         st.dataframe(df_por_dia.style.format({'Inversión': "${:,.2f}", 'Ganancia Neta': "${:,.2f}"}).apply(lambda row: ['background-color: #e6ffed; color: black;' if row['Ganancia Neta'] > 0 else 'background-color: #ffe6e6; color: black;' for i in row], axis=1), use_container_width=True)
 
     elif st.session_state.get('editing_record') is not None:
+        # ... (código de edición de registros sin cambios) ...
         id_actual = st.session_state.oferta_seleccionada
         oferta_actual = st.session_state.ofertas[id_actual]
         editing_info = st.session_state.editing_record
@@ -1017,8 +1018,8 @@ def main_app():
             st.session_state['editing_record'] = None
             time.sleep(2)
             st.rerun()
-
     elif st.session_state.get('anuncio_para_escalar'):
+        # ... (código del módulo de escala sin cambios) ...
         id_actual = st.session_state.oferta_seleccionada
         st.header(f"🚀 Módulo de Lanzamiento de Escala")
         st.subheader(f"Anuncio Ganador: {st.session_state['anuncio_para_escalar']}")
@@ -1115,6 +1116,7 @@ def main_app():
 
         tab_resumen, tab_lanzamiento, tab_funnel, tab_campanas = st.tabs(["📊 Resumen", "✅ Lanzamiento", "🛠️ Funnel", "⚔️ Campañas"])
         with tab_resumen:
+            # ... (código del tab resumen sin cambios) ...
             st.subheader("Análisis General de la Oferta")
             with st.container(border=True):
                 col_test, col_escala = st.columns(2)
@@ -1184,6 +1186,7 @@ def main_app():
                             actualizar_configuracion_financiera(id_actual, nueva_comision, nuevo_cpa)
                             st.rerun()
         with tab_lanzamiento:
+            # ... (código del tab lanzamiento sin cambios) ...
             editing_checklist = st.session_state.get('editing_checklist_oferta_id') == id_actual
             checklist_data = oferta_actual.get('checklist')
 
@@ -1247,8 +1250,8 @@ def main_app():
                             st.session_state.ofertas[id_actual]['checklist']['tareas'][i]['completed'] = is_checked
                             save_data_to_firestore()
                             st.rerun()
-
         with tab_funnel:
+            # ... (código del tab funnel sin cambios) ...
             st.subheader("Añadir Nuevos Elementos al Funnel")
             c1, c2, c3 = st.columns(3)
             with c1:
@@ -1279,8 +1282,10 @@ def main_app():
                 if col2.button(button_text, key=f"btn_toggle_{item_id}"):
                     toggle_estado_funnel_item(id_actual, item_id); st.rerun()
         with tab_campanas:
+            # ... (código del tab campañas con las mejoras) ...
             sub_tab_test, sub_tab_escala, sub_tab_analisis = st.tabs(["🧪 Fase de Testeo", "🚀 Fase de Escala", "🔬 Análisis Global del Funnel"])
             with sub_tab_test:
+                # ... (código de sub_tab_test sin cambios) ...
                 st.subheader("1. Registro de Datos de Testeo")
                 col1, col2 = st.columns(2)
                 with col1:
@@ -1450,6 +1455,10 @@ def main_app():
                 st.header("📊 Panel de Control de Campañas de Escala")
                 campanas_escala = oferta_actual.get('escala', {})
                 st.markdown("---")
+                
+                # MEJORA 1: Filtro para campañas activas/inactivas
+                mostrar_inactivas = st.checkbox("Mostrar campañas inactivas", value=False)
+                
                 st.subheader("✍️ Registrar Datos Diarios de Escala")
                 if not campanas_escala:
                     st.info("Crea tu primera campaña de escala desde la 'Fase de Testeo' para poder registrar datos.")
@@ -1480,8 +1489,13 @@ def main_app():
                                     agregar_registro_escala(id_actual, id_campana_sel, nuevo_registro); st.rerun()
                                 else: st.warning("Asegúrate de seleccionar un componente.")
                 st.markdown("---")
-                if not campanas_escala:
-                    st.info("Aquí se mostrarán tus campañas de escala una vez que las lances.")
+                
+                campanas_a_mostrar = campanas_escala
+                if not mostrar_inactivas:
+                    campanas_a_mostrar = {cid: cdetails for cid, cdetails in campanas_escala.items() if cdetails.get("estado", "🟢 Activa") == "🟢 Activa"}
+
+                if not campanas_a_mostrar:
+                    st.info("No hay campañas de escala activas. Marca la casilla de arriba para ver las inactivas.")
                 else:
                     def color_roas(val):
                         color = 'inherit'
@@ -1493,13 +1507,16 @@ def main_app():
                         if val > 0: color = '#33ff99'
                         elif val < 0: color = '#ff3366'
                         return f'color: {color}'
-                    for cid, cdetails in campanas_escala.items():
+                    
+                    for cid, cdetails in campanas_a_mostrar.items():
                         ganancia_neta_campana_header = 0
                         if 'registros' in cdetails and not cdetails['registros'].empty:
                             ganancia_neta_campana_header = cdetails['registros']['Ganancia Neta'].sum()
                         estado_campana = cdetails.get("estado", "🟢 Activa")
                         expander_title = f"**{cdetails['nombre_campana']}** (Estrategia: {cdetails['estrategia']}) | Estado: {estado_campana} | Ganancia Neta: ${ganancia_neta_campana_header:,.2f}"
-                        with st.expander(expander_title, expanded=True):
+                        
+                        # MEJORA 2: Expanders minimizados por defecto
+                        with st.expander(expander_title, expanded=False):
                             df_escala_raw = cdetails['registros'].copy()
                             c1, c2, c3 = st.columns([2,2,1])
                             if c3.button("🔴 Apagar Campaña" if estado_campana == "🟢 Activa" else "✅ Activar Campaña", key=f"toggle_camp_{cid}"):
@@ -1594,6 +1611,7 @@ def main_app():
                             else:
                                 st.warning("No hay datos en el rango de fechas seleccionado para esta campaña.")
             with sub_tab_analisis:
+                # ... (código del tab analisis sin cambios) ...
                 st.subheader("🔬 Monitor de Signos Vitales del Embudo (Global)")
                 df_funnel_completo = [df_testeos_global.copy()]
                 for camp_details in oferta_actual.get('escala', {}).values():
