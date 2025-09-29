@@ -2,9 +2,8 @@ streamlit
 pandas
 pyrebase4
 firebase-admin
-
-Fijamos las versiones de las librerías de Google y JWT para asegurar la compatibilidad
 google-cloud-storage==2.7.0
 PyJWT==2.3.0
 setuptools
 requests
+
