@@ -2,3 +2,7 @@ streamlit
 pandas
 pyrebase4
 firebase-admin
+google-cloud-storage
+requests
+python-jwt
+gcloud
