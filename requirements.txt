@@ -4,7 +4,7 @@ firebase-admin
 pyrebase4
 google-cloud-storage==2.7.0
 PyJWT==2.3.0
-setuptools==59.6.0
+setuptools==69.0.2
 requests-toolbelt==0.9.1
 google-api-python-client
 google-auth
