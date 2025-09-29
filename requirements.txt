@@ -1,0 +1,4 @@
+streamlit
+pandas
+pyrebase4
+firebase-admin
